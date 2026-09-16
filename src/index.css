@@ -3,25 +3,35 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-tm-bg text-white antialiased;
+    background-image: radial-gradient(ellipse 80% 50% at 70% 0%, rgba(0, 255, 136, 0.07), transparent 55%);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-tm-green px-6 py-3 font-semibold text-tm-bg transition hover:bg-tm-green-dim;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-tm-green px-6 py-3 text-[14px] font-semibold text-[#06100c] shadow-[0_0_24px_rgba(0,255,136,0.25)] transition hover:bg-tm-green-dim;
   }
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-tm-green/60 px-6 py-3 font-semibold text-white transition hover:border-tm-green hover:bg-tm-green/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-6 py-3 text-[14px] font-semibold text-white transition hover:border-tm-green/50 hover:bg-white/[0.06];
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.12] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:border-tm-green/40;
   }
   .card {
-    @apply rounded-2xl border border-tm-border bg-tm-card/80 backdrop-blur-sm;
+    @apply rounded-[20px] border border-white/[0.08] bg-[#0c1210]/90 backdrop-blur-sm;
   }
-  .nav-link {
-    @apply text-sm text-zinc-400 transition hover:text-white;
+  .label-pill {
+    @apply inline-flex items-center rounded-full border border-tm-green/35 bg-tm-green/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-tm-green;
   }
-  .nav-link-active {
-    @apply text-white after:mt-1 after:block after:h-0.5 after:w-full after:rounded-full after:bg-tm-green;
+  .check-dot {
+    @apply flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-tm-green text-[#06100c];
+  }
+  .field {
+    @apply mt-1.5 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-tm-green/50;
   }
 }
