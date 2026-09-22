@@ -14,6 +14,14 @@ import Footer from '../components/Footer';
 import { CheckItem, SectionLabel, Wrap } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { PlanId, usePricing } from '../context/PricingContext';
+import { getGclid } from '../lib/tracking';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function isValidUsPhone(value: string) {
+  const digits = value.replace(/\D/g, '');
+  return /^1?\d{10}$/.test(digits);
+}
 
 const plans: {
   id: PlanId;
@@ -71,13 +79,54 @@ export default function PricingPage() {
   const { selectedPlan, setSelectedPlan } = usePricing();
   const { register } = useAuth();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const [errors, setErrors] = useState<{ email?: string; phone?: string }>({});
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedPlan) return;
-    register(form.name);
-    setSubmitted(true);
+    if (!selectedPlan || submitting) return;
+
+    const nextErrors: { email?: string; phone?: string } = {};
+    if (!EMAIL_RE.test(form.email.trim())) {
+      nextErrors.email = 'Enter a valid email address.';
+    }
+    if (!isValidUsPhone(form.phone)) {
+      nextErrors.phone = 'Enter a valid US phone number (10 digits).';
+    }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    const [firstName, ...rest] = form.name.trim().split(/\s+/);
+    const lastName = rest.join(' ');
+
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const res = await fetch('/api/submit-lead.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          userAgent: navigator.userAgent,
+          gtag: getGclid(),
+        }),
+      });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'request_failed');
+      }
+      register(form.name);
+      setSubmitted(true);
+    } catch {
+      setSubmitError('Something went wrong sending your request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -294,10 +343,14 @@ export default function PricingPage() {
                         disabled={!selectedPlan}
                         placeholder="(555) 123-4567"
                         value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="field mt-0 flex-1"
+                        onChange={(e) => {
+                          setForm({ ...form, phone: e.target.value });
+                          if (errors.phone) setErrors({ ...errors, phone: undefined });
+                        }}
+                        className={`field mt-0 flex-1 ${errors.phone ? 'border-red-500/60' : ''}`}
                       />
                     </div>
+                    {errors.phone && <p className="mt-1.5 text-[12px] text-red-400">{errors.phone}</p>}
                   </label>
                   <label className="block text-[13px] text-zinc-400">
                     Email <span className="text-red-400">*</span>
@@ -307,13 +360,22 @@ export default function PricingPage() {
                       disabled={!selectedPlan}
                       placeholder="you@example.com"
                       value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="field"
+                      onChange={(e) => {
+                        setForm({ ...form, email: e.target.value });
+                        if (errors.email) setErrors({ ...errors, email: undefined });
+                      }}
+                      className={`field ${errors.email ? 'border-red-500/60' : ''}`}
                     />
+                    {errors.email && <p className="mt-1.5 text-[12px] text-red-400">{errors.email}</p>}
                   </label>
-                  <button type="submit" disabled={!selectedPlan} className="btn-primary w-full py-3.5">
-                    Continue <ArrowRight className="h-5 w-5" />
+                  <button
+                    type="submit"
+                    disabled={!selectedPlan || submitting}
+                    className="btn-primary w-full py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? 'Sending…' : 'Continue'} <ArrowRight className="h-5 w-5" />
                   </button>
+                  {submitError && <p className="text-center text-[12px] text-red-400">{submitError}</p>}
                   <p className="flex items-center justify-center gap-2 text-[11px] text-zinc-500">
                     <Lock className="h-3 w-3" /> Your information is safe and protected
                   </p>
